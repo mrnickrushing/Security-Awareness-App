@@ -6,8 +6,9 @@ export default function Login() {
   const { login }  = useAuth();
   const navigate   = useNavigate();
 
-  const [email, setEmail]       = useState("admin@example.com");
-  const [password, setPassword] = useState("Admin123!");
+  // FIX: removed hardcoded credentials
+  const [email, setEmail]       = useState("");
+  const [password, setPassword] = useState("");
   const [error, setError]       = useState("");
   const [loading, setLoading]   = useState(false);
 
@@ -48,6 +49,7 @@ export default function Login() {
               value={email}
               onChange={(e) => setEmail(e.target.value)}
               required
+              autoComplete="username"
               className="w-full rounded-xl border border-slate-700 bg-slate-950/70 px-4 py-3 text-white outline-none focus:border-cyan-500"
             />
           </div>
@@ -59,6 +61,7 @@ export default function Login() {
               value={password}
               onChange={(e) => setPassword(e.target.value)}
               required
+              autoComplete="current-password"
               className="w-full rounded-xl border border-slate-700 bg-slate-950/70 px-4 py-3 text-white outline-none focus:border-cyan-500"
             />
           </div>
