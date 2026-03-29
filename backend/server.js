@@ -2,6 +2,8 @@ const express = require("express");
 const session = require("express-session");
 const cookieParser = require("cookie-parser");
 const cors = require("cors");
+const path = require("path");
+const fs = require("fs");
 
 const { initDb } = require("./src/db");
 
@@ -21,29 +23,34 @@ const scenarioRoutes       = require("./src/routes/scenarios");
 
 const app  = express();
 const PORT = process.env.PORT || 5174;
+const isProd = process.env.NODE_ENV === "production";
 
 initDb();
 
 app.use(express.json());
 app.use(cookieParser());
 
-app.use(
-  cors({
-    origin: "http://localhost:5173",
-    credentials: true,
-  })
-);
+if (isProd) {
+  app.use(cors({ origin: false }));
+} else {
+  app.use(
+    cors({
+      origin: "http://localhost:5173",
+      credentials: true,
+    })
+  );
+}
 
 app.use(
   session({
     name: "sa.sid",
-    secret: "dev_secret_change_me",
+    secret: process.env.SESSION_SECRET || "dev_secret_change_me",
     resave: false,
     saveUninitialized: false,
     cookie: {
       httpOnly: true,
       sameSite: "lax",
-      secure: false,
+      secure: isProd,
       maxAge: 1000 * 60 * 60 * 8,
     },
   })
@@ -65,6 +72,16 @@ app.use("/api/module-progress", moduleProgressRoutes);
 app.use("/api/faq",             faqRoutes);
 app.use("/api/scenarios",       scenarioRoutes);
 
+if (isProd) {
+  const frontendDist = path.join(__dirname, "../frontend/dist");
+  if (fs.existsSync(frontendDist)) {
+    app.use(express.static(frontendDist));
+    app.get("*", (req, res) => {
+      res.sendFile(path.join(frontendDist, "index.html"));
+    });
+  }
+}
+
 app.listen(PORT, () => {
-  console.log(`Security Awareness backend running on http://localhost:${PORT}`);
+  console.log(`Server running on port ${PORT}`);
 });

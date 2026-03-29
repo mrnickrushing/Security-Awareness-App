@@ -1,0 +1,8 @@
+{
+  "name": "security-awareness-app",
+  "scripts": {
+    "build": "cd frontend && npm install && npm run build",
+    "start": "cd backend && node server.js",
+    "install": "cd backend && npm install"
+  }
+}

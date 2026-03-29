@@ -1,4 +1,6 @@
-const API_BASE = "http://localhost:5174/api";
+const API_BASE = import.meta.env.PROD
+  ? "/api"
+  : "http://localhost:5174/api";
 
 async function api(path, options = {}) {
   const token = localStorage.getItem("token");
