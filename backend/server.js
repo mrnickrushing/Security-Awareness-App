@@ -27,6 +27,9 @@ const isProd = process.env.NODE_ENV === "production";
 
 initDb();
 
+// Trust Railway's proxy so secure cookies work over HTTPS
+if (isProd) app.set("trust proxy", 1);
+
 app.use(express.json());
 app.use(cookieParser());
 
@@ -49,7 +52,7 @@ app.use(
     saveUninitialized: false,
     cookie: {
       httpOnly: true,
-      sameSite: "lax",
+      sameSite: isProd ? "none" : "lax",
       secure: isProd,
       maxAge: 1000 * 60 * 60 * 8,
     },
