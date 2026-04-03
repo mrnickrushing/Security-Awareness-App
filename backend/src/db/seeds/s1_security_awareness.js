@@ -55,7 +55,7 @@ function seedS1(db) {
 
       Phishing works because it targets human behavior, not technology.
       Slow down, verify, and never act on urgency alone.
-      `
+      `,
       category: "Email Security", difficulty: "beginner", duration_minutes: 10, order_index: 1,
       quiz: [
         { question_text: "What does hovering over a link in an email before clicking it reveal?", choice_a: "The true destination URL so you can verify it goes where it claims", choice_b: "Whether the email was sent from a verified sender", choice_c: "The date the link was created", correct_choice: "A", explanation: "Hovering reveals the actual destination URL in your browser status bar without loading the page, letting you spot lookalike or malicious domains before clicking." },
