@@ -1,5 +1,5 @@
 const API_BASE = import.meta.env.PROD
-  ? "/api"
+  ? "https://security-awareness-app-production.up.railway.app/api"
   : "http://localhost:5174/api";
 
 async function api(path, options = {}) {
