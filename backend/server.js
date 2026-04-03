@@ -1,6 +1,5 @@
 const express = require("express");
 const session = require("express-session");
-const SQLiteStore = require("connect-sqlite3")(session);
 const cookieParser = require("cookie-parser");
 const cors = require("cors");
 const path = require("path");
@@ -28,13 +27,11 @@ const isProd = process.env.NODE_ENV === "production";
 
 initDb();
 
-// Trust Railway proxy
 if (isProd) app.set("trust proxy", 1);
 
 app.use(express.json());
 app.use(cookieParser());
 
-// CORS fix for cookies
 if (isProd) {
   app.use(cors({
     origin: "https://security-awareness-app-production.up.railway.app",
@@ -47,13 +44,8 @@ if (isProd) {
   }));
 }
 
-// ✅ FIXED SESSION STORE (no more MemoryStore)
 app.use(
   session({
-    store: new SQLiteStore({
-      db: "sessions.sqlite",
-      dir: path.join(__dirname, "data"),
-    }),
     name: "sa.sid",
     secret: process.env.SESSION_SECRET || "dev_secret_change_me",
     resave: false,
@@ -83,7 +75,6 @@ app.use("/api/module-progress", moduleProgressRoutes);
 app.use("/api/faq",             faqRoutes);
 app.use("/api/scenarios",       scenarioRoutes);
 
-// Serve frontend
 if (isProd) {
   const frontendDist = path.join(__dirname, "../frontend/dist");
   if (fs.existsSync(frontendDist)) {
