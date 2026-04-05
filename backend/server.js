@@ -27,35 +27,40 @@ const isProd = process.env.NODE_ENV === "production";
 
 initDb();
 
-// ── Migrations ────────────────────────────────────────────────────────────────
+// ── Versioned migrations ──────────────────────────────────────────────────────
 try {
   const { db } = require("./src/db");
+  const { hasMigration, recordMigration } = require("./src/db/schema");
 
-  // 1. Ensure full long-form module content
-  const shortest = db.prepare("SELECT MIN(LENGTH(content)) as min FROM modules").get();
-  if (shortest && shortest.min < 1500) {
-    console.log("Running content migration...");
+  if (!hasMigration(db, 1)) {
+    console.log("Migration v1: module content sections 1-7...");
     require("./updateS1toS7Content");
+    recordMigration(db, 1);
+    console.log("Migration v1 done.");
+  }
+
+  if (!hasMigration(db, 2)) {
+    console.log("Migration v2: module content sections 8-11...");
     require("./updateNewSectionsContent");
-    console.log("Content migration complete.");
+    recordMigration(db, 2);
+    console.log("Migration v2 done.");
   }
 
-  // 2. Ensure answer positions are balanced (not always longest = correct)
-  const answerCheck = db.prepare(`
-    SELECT COUNT(*) as c FROM module_quiz_questions
-    WHERE correct_choice = 'B'
-    AND LENGTH(choice_b) > LENGTH(choice_a)
-    AND LENGTH(choice_b) > LENGTH(choice_c)
-  `).get();
-  const total = db.prepare("SELECT COUNT(*) as c FROM module_quiz_questions").get();
-  const bLongestRate = total.c > 0 ? answerCheck.c / total.c : 0;
-
-  if (bLongestRate > 0.5) {
-    console.log("Running answer balance migration...");
+  if (!hasMigration(db, 3)) {
+    console.log("Migration v3: rotating answer positions...");
     require("./fixAnswerLengths");
-    require("./fixAnswerLengthBalance");
-    console.log("Answer balance migration complete.");
+    recordMigration(db, 3);
+    console.log("Migration v3 done.");
   }
+
+  if (!hasMigration(db, 4)) {
+    console.log("Migration v4: padding wrong answer lengths...");
+    require("./fixAnswerLengthBalance");
+    recordMigration(db, 4);
+    console.log("Migration v4 done.");
+  }
+
+  console.log("All migrations complete.");
 } catch (e) {
   console.error("Migration error:", e.message);
 }
