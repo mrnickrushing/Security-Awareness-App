@@ -239,11 +239,10 @@ function runSchema(db) {
   db.prepare(`
     CREATE TABLE IF NOT EXISTS certificates (
       id INTEGER PRIMARY KEY AUTOINCREMENT,
-      user_id INTEGER NOT NULL UNIQUE,
+      user_id INTEGER NOT NULL,
       issued_at TEXT NOT NULL DEFAULT (datetime('now')),
       modules_completed INTEGER NOT NULL DEFAULT 0,
-      simulations_completed INTEGER NOT NULL DEFAULT 0,
-      average_score INTEGER NOT NULL DEFAULT 0,
+      avg_quiz_score INTEGER NOT NULL DEFAULT 0,
       FOREIGN KEY(user_id) REFERENCES users(id)
     )
   `).run();
@@ -317,7 +316,7 @@ function upsertSection(db, name, description, icon, color, order_index) {
 function upsertModule(db, title, content, extras = {}) {
   const existing = db.prepare("SELECT id,content FROM modules WHERE title=?").get(title);
   if (existing) {
-    const keepContent = existing.content.length > 500 ? existing.content : content;
+    const keepContent = (existing.content && existing.content.length > 500) ? existing.content : content;
     db.prepare(`
       UPDATE modules SET content=?,category=?,difficulty=?,
         duration_minutes=?,order_index=?,section_id=?,updated_at=datetime('now')
