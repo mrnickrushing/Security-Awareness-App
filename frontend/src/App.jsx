@@ -24,15 +24,11 @@ export default function App() {
     <AuthProvider>
       <BrowserRouter>
         <Routes>
+          <Route path="/"                  element={<Navigate to="/welcome" replace />} />
+          <Route path="/welcome"           element={<Welcome />} />
           <Route path="/login"             element={<Login />} />
           <Route path="/register"          element={<Register />} />
           <Route path="/register/success"  element={<Register />} />
-          <Route path="/" element={
-            <ProtectedRoute><Navigate to="/dashboard" replace /></ProtectedRoute>
-          } />
-          <Route path="/welcome" element={
-            <ProtectedRoute><Welcome /></ProtectedRoute>
-          } />
           <Route path="/dashboard" element={
             <ProtectedRoute><Dashboard /></ProtectedRoute>
           } />
@@ -72,7 +68,7 @@ export default function App() {
           <Route path="/admin-builder" element={
             <ProtectedRoute><AdminBuilder /></ProtectedRoute>
           } />
-          <Route path="*" element={<Navigate to="/dashboard" replace />} />
+          <Route path="*" element={<Navigate to="/welcome" replace />} />
         </Routes>
       </BrowserRouter>
     </AuthProvider>
