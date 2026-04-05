@@ -1,29 +1,74 @@
-import { useState } from "react";
-import { useNavigate, Link } from "react-router-dom";
+import { useState, useEffect } from "react";
+import { useNavigate, useLocation, Link } from "react-router-dom";
 import { useAuth } from "../context/AuthContext";
 
 export default function Register() {
-  const { register } = useAuth();
+  const { setUser }  = useAuth();
   const navigate     = useNavigate();
+  const location     = useLocation();
 
   const [email, setEmail]       = useState("");
   const [password, setPassword] = useState("");
   const [error, setError]       = useState("");
   const [loading, setLoading]   = useState(false);
+  const [verifying, setVerifying] = useState(false);
+
+  useEffect(() => {
+    const params = new URLSearchParams(location.search);
+    const sessionId = params.get("session_id");
+    if (sessionId && location.pathname.includes("success")) {
+      setVerifying(true);
+      fetch(`/api/stripe/verify-session?session_id=${sessionId}`, {
+        credentials: "include",
+      })
+        .then((r) => r.json())
+        .then((data) => {
+          if (data.ok) {
+            setUser(data.user);
+            navigate("/dashboard");
+          } else {
+            setError(data.error || "Payment verification failed.");
+            setVerifying(false);
+          }
+        })
+        .catch(() => {
+          setError("Something went wrong verifying your payment.");
+          setVerifying(false);
+        });
+    }
+  }, [location]);
 
   const handleSubmit = async (e) => {
     e.preventDefault();
     setError("");
     setLoading(true);
     try {
-      await register(email, password);
-      navigate("/dashboard");
+      const res = await fetch("/api/stripe/create-checkout-session", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        credentials: "include",
+        body: JSON.stringify({ email, password }),
+      });
+      const data = await res.json();
+      if (!res.ok) {
+        setError(data.error || "Something went wrong.");
+        setLoading(false);
+        return;
+      }
+      window.location.href = data.url;
     } catch (err) {
-      setError(err.message || "Registration failed");
-    } finally {
+      setError("Could not connect to payment system.");
       setLoading(false);
     }
   };
+
+  if (verifying) {
+    return (
+      <div className="flex min-h-screen items-center justify-center bg-slate-950">
+        <p className="text-white text-lg">Verifying your payment, please wait...</p>
+      </div>
+    );
+  }
 
   return (
     <div className="flex min-h-screen items-center justify-center bg-slate-950 px-4">
@@ -31,7 +76,7 @@ export default function Register() {
 
         <h1 className="text-3xl font-bold text-white">Create Account</h1>
         <p className="mt-2 text-sm text-slate-400">
-          Join the Computer Fundamentals & Security training platform
+          Join CyberCore Academy — one time $10.00 access fee
         </p>
 
         {error && (
@@ -70,7 +115,7 @@ export default function Register() {
             disabled={loading}
             className="w-full rounded-xl bg-cyan-500 px-4 py-3 font-semibold text-slate-950 hover:bg-cyan-400 disabled:opacity-60"
           >
-            {loading ? "Creating account..." : "Create Account"}
+            {loading ? "Redirecting to payment..." : "Continue to Payment — $10.00"}
           </button>
         </form>
 

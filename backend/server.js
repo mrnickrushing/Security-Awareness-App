@@ -8,6 +8,7 @@ const fs = require("fs");
 const { initDb } = require("./src/db");
 
 const authRoutes           = require("./src/routes/auth");
+const stripeRoutes         = require("./src/routes/stripe");
 const moduleRoutes         = require("./src/routes/modules");
 const simRoutes            = require("./src/routes/simulations");
 const attemptRoutes        = require("./src/routes/attempts");
@@ -73,7 +74,7 @@ app.use(cookieParser());
 
 if (isProd) {
   app.use(cors({
-    origin: "https://security-awareness-app-production.up.railway.app",
+    origin: "https://www.cybercoreacademy.com",
     credentials: true,
   }));
 } else {
@@ -101,6 +102,7 @@ app.use(
 app.get("/api/health", (req, res) => res.json({ ok: true }));
 
 app.use("/api/auth",            authRoutes);
+app.use("/api/stripe",          stripeRoutes);
 app.use("/api/sections",        sectionRoutes);
 app.use("/api/modules",         moduleRoutes);
 app.use("/api/simulations",     simRoutes);
