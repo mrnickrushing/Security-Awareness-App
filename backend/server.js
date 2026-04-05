@@ -27,20 +27,37 @@ const isProd = process.env.NODE_ENV === "production";
 
 initDb();
 
-// ── Content migration: ensure all modules have full long-form content ─────────
+// ── Migrations ────────────────────────────────────────────────────────────────
 try {
   const { db } = require("./src/db");
-  const shortest = db.prepare(
-    "SELECT MIN(LENGTH(content)) as min FROM modules"
-  ).get();
+
+  // 1. Ensure full long-form module content
+  const shortest = db.prepare("SELECT MIN(LENGTH(content)) as min FROM modules").get();
   if (shortest && shortest.min < 1500) {
     console.log("Running content migration...");
     require("./updateS1toS7Content");
     require("./updateNewSectionsContent");
     console.log("Content migration complete.");
   }
+
+  // 2. Ensure answer positions are balanced (not always longest = correct)
+  const answerCheck = db.prepare(`
+    SELECT COUNT(*) as c FROM module_quiz_questions
+    WHERE correct_choice = 'B'
+    AND LENGTH(choice_b) > LENGTH(choice_a)
+    AND LENGTH(choice_b) > LENGTH(choice_c)
+  `).get();
+  const total = db.prepare("SELECT COUNT(*) as c FROM module_quiz_questions").get();
+  const bLongestRate = total.c > 0 ? answerCheck.c / total.c : 0;
+
+  if (bLongestRate > 0.5) {
+    console.log("Running answer balance migration...");
+    require("./fixAnswerLengths");
+    require("./fixAnswerLengthBalance");
+    console.log("Answer balance migration complete.");
+  }
 } catch (e) {
-  console.error("Content migration error:", e.message);
+  console.error("Migration error:", e.message);
 }
 // ─────────────────────────────────────────────────────────────────────────────
 
