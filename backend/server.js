@@ -27,6 +27,23 @@ const isProd = process.env.NODE_ENV === "production";
 
 initDb();
 
+// ── Content migration: ensure all modules have full long-form content ─────────
+try {
+  const { db } = require("./src/db");
+  const shortest = db.prepare(
+    "SELECT MIN(LENGTH(content)) as min FROM modules"
+  ).get();
+  if (shortest && shortest.min < 1500) {
+    console.log("Running content migration...");
+    require("./updateS1toS7Content");
+    require("./updateNewSectionsContent");
+    console.log("Content migration complete.");
+  }
+} catch (e) {
+  console.error("Content migration error:", e.message);
+}
+// ─────────────────────────────────────────────────────────────────────────────
+
 if (isProd) app.set("trust proxy", 1);
 
 app.use(express.json());
