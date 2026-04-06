@@ -57,12 +57,13 @@ function getSectionProgress(userId, adminOverride) {
 
     if (isComplete && !cert) {
       db.prepare(`
-        INSERT INTO section_certificates (user_id, section_id, modules_completed, avg_quiz_score)
+        INSERT OR IGNORE INTO section_certificates (user_id, section_id, modules_completed, avg_quiz_score)
         VALUES (?, ?, ?, ?)
-        ON CONFLICT(user_id, section_id) DO UPDATE SET
-          modules_completed = excluded.modules_completed,
-          avg_quiz_score = excluded.avg_quiz_score
       `).run(userId, section.id, completed, Math.round(avgScore));
+      db.prepare(`
+        UPDATE section_certificates SET modules_completed = ?, avg_quiz_score = ?
+        WHERE user_id = ? AND section_id = ?
+      `).run(completed, Math.round(avgScore), userId, section.id);
       cert = db.prepare(`
         SELECT * FROM section_certificates WHERE user_id = ? AND section_id = ?
       `).get(userId, section.id);
@@ -79,18 +80,18 @@ function getSectionProgress(userId, adminOverride) {
     }
 
     results.push({
-      sectionId:       section.id,
-      sectionName:     section.name,
-      icon:            section.icon,
-      color:           section.color,
-      orderIndex:      section.order_index,
-      totalModules:    section.total_modules,
+      sectionId:        section.id,
+      sectionName:      section.name,
+      icon:             section.icon,
+      color:            section.color,
+      orderIndex:       section.order_index,
+      totalModules:     section.total_modules,
       completedModules: completed,
-      avgQuizScore:    Math.round(avgScore),
+      avgQuizScore:     Math.round(avgScore),
       percent,
       isComplete,
-      issuedAt:        cert ? cert.issued_at : null,
-      certId:          cert ? cert.id : null,
+      issuedAt:         cert ? cert.issued_at : null,
+      certId:           cert ? cert.id : null,
     });
   }
 
@@ -106,11 +107,11 @@ router.get("/me", (req, res) => {
   const user  = db.prepare("SELECT email FROM users WHERE id = ?").get(userId);
   const sectionProgress = getSectionProgress(userId, admin);
 
-  const totalSections    = sectionProgress.length;
+  const totalSections     = sectionProgress.length;
   const completedSections = sectionProgress.filter(s => s.isComplete).length;
-  const allComplete      = completedSections === totalSections;
+  const allComplete       = completedSections === totalSections;
 
-  const masterCert = db.prepare("SELECT * FROM certificates WHERE user_id = ?").get(userId);
+  let masterCert = db.prepare("SELECT * FROM certificates WHERE user_id = ?").get(userId);
 
   if (allComplete && !masterCert) {
     const simStats = db.prepare(`
@@ -121,11 +122,9 @@ router.get("/me", (req, res) => {
     db.prepare(`
       INSERT INTO certificates (user_id, modules_completed, simulations_completed, average_score)
       VALUES (?, ?, ?, ?)
-      ON CONFLICT(user_id) DO NOTHING
     `).run(userId, totalMods, simStats.count, Math.round(simStats.avg_score));
+    masterCert = db.prepare("SELECT * FROM certificates WHERE user_id = ?").get(userId);
   }
-
-  const updatedMasterCert = db.prepare("SELECT * FROM certificates WHERE user_id = ?").get(userId);
 
   res.json({
     userName:          user ? user.email.split("@")[0] : "Trainee",
@@ -133,11 +132,11 @@ router.get("/me", (req, res) => {
     completedSections,
     totalSections,
     allComplete,
-    masterCert: updatedMasterCert ? {
-      issuedAt:             updatedMasterCert.issued_at,
-      modulesCompleted:     updatedMasterCert.modules_completed,
-      simulationsCompleted: updatedMasterCert.simulations_completed,
-      averageScore:         updatedMasterCert.average_score,
+    masterCert: masterCert ? {
+      issuedAt:             masterCert.issued_at,
+      modulesCompleted:     masterCert.modules_completed,
+      simulationsCompleted: masterCert.simulations_completed,
+      averageScore:         masterCert.average_score,
     } : null,
   });
 });
@@ -163,15 +162,22 @@ router.post("/claim", (req, res) => {
     FROM attempts WHERE user_id = ? AND completed_at IS NOT NULL
   `).get(userId);
 
-  db.prepare(`
-    INSERT INTO certificates (user_id, modules_completed, simulations_completed, average_score)
-    VALUES (?, ?, ?, ?)
-    ON CONFLICT(user_id) DO UPDATE SET
-      issued_at = datetime('now'),
-      modules_completed = excluded.modules_completed,
-      simulations_completed = excluded.simulations_completed,
-      average_score = excluded.average_score
-  `).run(userId, totalMods, simStats.count, Math.round(simStats.avg_score));
+  const existing = db.prepare("SELECT id FROM certificates WHERE user_id = ?").get(userId);
+  if (existing) {
+    db.prepare(`
+      UPDATE certificates SET
+        issued_at = datetime('now'),
+        modules_completed = ?,
+        simulations_completed = ?,
+        average_score = ?
+      WHERE user_id = ?
+    `).run(totalMods, simStats.count, Math.round(simStats.avg_score), userId);
+  } else {
+    db.prepare(`
+      INSERT INTO certificates (user_id, modules_completed, simulations_completed, average_score)
+      VALUES (?, ?, ?, ?)
+    `).run(userId, totalMods, simStats.count, Math.round(simStats.avg_score));
+  }
 
   res.json({ ok: true });
 });
