@@ -61,6 +61,19 @@ try {
     console.log("Migration v4 done.");
   }
 
+  if (!hasMigration(db, 5)) {
+    console.log("Migration v5: adding missing certificates columns...");
+    const cols = db.prepare("PRAGMA table_info(certificates)").all().map(c => c.name);
+    if (!cols.includes("simulations_completed")) {
+      db.prepare("ALTER TABLE certificates ADD COLUMN simulations_completed INTEGER NOT NULL DEFAULT 0").run();
+    }
+    if (!cols.includes("average_score")) {
+      db.prepare("ALTER TABLE certificates ADD COLUMN average_score INTEGER NOT NULL DEFAULT 0").run();
+    }
+    recordMigration(db, 5);
+    console.log("Migration v5 done.");
+  }
+
   console.log("All migrations complete.");
 } catch (e) {
   console.error("Migration error:", e.message);
