@@ -59,6 +59,18 @@ function ensureUserColumns(db) {
   }
 }
 
+function ensureCertificateColumns(db) {
+  const additions = [
+    ["simulations_completed", "INTEGER NOT NULL DEFAULT 0"],
+    ["average_score",         "INTEGER NOT NULL DEFAULT 0"],
+  ];
+  for (const [name, def] of additions) {
+    if (!columnExists(db, "certificates", name)) {
+      db.prepare(`ALTER TABLE certificates ADD COLUMN ${name} ${def}`).run();
+    }
+  }
+}
+
 function ensureDecisionTreeTables(db) {
   db.prepare(`
     CREATE TABLE IF NOT EXISTS decision_nodes (
@@ -246,6 +258,8 @@ function runSchema(db) {
       FOREIGN KEY(user_id) REFERENCES users(id)
     )
   `).run();
+
+  ensureCertificateColumns(db);
 
   db.prepare(`
     CREATE TABLE IF NOT EXISTS section_certificates (
